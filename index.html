@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harmonograph Loom</title>
+<style>
+html,body{margin:0;height:100%;background:#0e0b14;color:#e8e0f0;font:14px system-ui,sans-serif}
+#wrap{display:flex;flex-direction:column;align-items:center;height:100%}
+canvas{flex:1;min-height:0;max-width:100%;touch-action:none}
+#bar{display:flex;flex-wrap:wrap;gap:10px;padding:10px;justify-content:center;align-items:center}
+button{background:#3b2a5c;color:#fff;border:0;border-radius:6px;padding:8px 14px;font-size:14px;cursor:pointer}
+button:hover{background:#56408a}
+label{display:flex;gap:6px;align-items:center}
+</style></head><body><div id="wrap">
+<canvas id="c" width="800" height="800"></canvas>
+<div id="bar">
+<button id="new">New pattern (space)</button>
+<label>Pendulums <input id="n" type="range" min="2" max="4" value="3"></label>
+<label>Decay <input id="d" type="range" min="1" max="30" value="8"></label>
+<label>Hue <input id="h" type="range" min="0" max="360" value="280"></label>
+<button id="save">Save PNG</button>
+</div></div>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+let seed=Math.random()*1e9|0;
+function rng(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+let P=[],T=0,raf=0;
+function make(){
+  P=[];const n=+$('n').value;
+  for(let i=0;i<n;i++){
+
+    P.push({f:Math.round((1+rng()*3)*2)/2+(rng()-.5)*0.01,ph:rng()*6.28,a:.25+rng()*.2,ax:i%2});
+  }
+  T=0;g.fillStyle='#0e0b14';g.fillRect(0,0,cv.width,cv.height);
+  cancelAnimationFrame(raf);raf=requestAnimationFrame(draw);
+}
+function pos(t){
+  const dec=+$('d').value/1000;let x=0,y=0;
+  for(const p of P){
+    const v=p.a*Math.exp(-dec*t)*Math.sin(p.f*t+p.ph);
+    if(p.ax)y+=v;else x+=v;
+  }
+  // ensure both axes used
+  return [x,y];
+}
+function draw(){
+  const w=cv.width,hh=cv.height,s=Math.min(w,hh)/1.2*1.2;
+  const hue=+$('h').value;
+  g.lineWidth=1.2;
+  for(let k=0;k<400;k++){
+    const a=pos(T),b=pos(T+.02);
+    g.strokeStyle=`hsla(${(hue+T*3)%360},80%,65%,.55)`;
+    g.beginPath();g.moveTo(w/2+a[0]*s,hh/2+a[1]*s);g.lineTo(w/2+b[0]*s,hh/2+b[1]*s);g.stroke();
+    T+=.02;
+  }
+  if(T<2000*(1/Math.max(.008,+$('d').value/1000))/200+300)raf=requestAnimationFrame(draw);
+}
+function fit(){const r=Math.min(innerWidth,innerHeight-60)|0;cv.style.width=r+'px';cv.style.height=r+'px';cv.style.flex='none'}
+addEventListener('resize',fit);fit();
+$('new').onclick=()=>{seed=Math.random()*1e9|0;make()};
+for(const id of['n','d','h'])$(id).oninput=make;
+addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('new').click()}});
+$('save').onclick=()=>{const a=document.createElement('a');a.download='loom.png';a.href=cv.toDataURL();a.click()};
+cv.onclick=()=>$('new').click();
+make();
+</script></body></html>
