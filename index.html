@@ -23,13 +23,15 @@ const cv=document.getElementById('c'),g=cv.getContext('2d');
 const $=id=>document.getElementById(id);
 let seed=Math.random()*1e9|0;
 function rng(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
-let P=[],T=0,raf=0;
+let P=[],T=0,raf=0,S=1;
 function make(){
   P=[];const n=+$('n').value;
   for(let i=0;i<n;i++){
 
     P.push({f:Math.round((1+rng()*3)*2)/2+(rng()-.5)*0.01,ph:rng()*6.28,a:.25+rng()*.2,ax:i%2});
   }
+  // scale so the largest possible swing (sum of amplitudes per axis) fits with a margin
+  const ex=[0,0];for(const p of P)ex[p.ax]+=p.a;S=.46/Math.max(ex[0],ex[1]);
   T=0;g.fillStyle='#0e0b14';g.fillRect(0,0,cv.width,cv.height);
   cancelAnimationFrame(raf);raf=requestAnimationFrame(draw);
 }
@@ -39,11 +41,10 @@ function pos(t){
     const v=p.a*Math.exp(-dec*t)*Math.sin(p.f*t+p.ph);
     if(p.ax)y+=v;else x+=v;
   }
-  // ensure both axes used
   return [x,y];
 }
 function draw(){
-  const w=cv.width,hh=cv.height,s=Math.min(w,hh)/1.2*1.2;
+  const w=cv.width,hh=cv.height,s=Math.min(w,hh)*S;
   const hue=+$('h').value;
   g.lineWidth=1.2;
   for(let k=0;k<400;k++){
